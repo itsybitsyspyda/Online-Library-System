@@ -47,7 +47,8 @@ void AdminMenu::showMenu()
 void AdminMenu::displayAdminMenu()
 {
     std::cout << "\n=== ADMIN PANEL ===" << std::endl;
-    std::cout << "Logged in as: " << loginSystem.getCurrentUser() << std::endl;
+    std::cout << "Logged in as: " << loginSystem.getCurrentUsername() << std::endl;
+    std::cout << "Logged in as user ID: " << loginSystem.getCurrentUserId() << std::endl;
     std::cout << "1. Book Management" << std::endl;
     std::cout << "2. User Management" << std::endl;
     std::cout << "3. Search Books" << std::endl;
