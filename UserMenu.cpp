@@ -1,139 +1,69 @@
-#include "UserMenu.h"
+#include "User.h"
 #include <iostream>
-#include <vector>
+#include <algorithm>
 
-UserMenu::UserMenu(Library &lib, LoginSystem &login, const std::string &uid)
-    : library(lib), loginSystem(login), userId(uid) {}
+User::User(std::string id, std::string username, std::string password, 
+           std::string name, std::string email, bool admin, int maxBooks)
+    : userId(id), username(username), password(password), 
+      name(name), email(email), maxBooksAllowed(maxBooks), isAdmin(admin) {}
 
-void UserMenu::showMenu()
-{
-    int choice;
+std::string User::getUserId() const { return userId; }
+std::string User::getUsername() const { return username; }
+std::string User::getPassword() const { return password; }
+std::string User::getName() const { return name; }
+std::string User::getEmail() const { return email; }
+bool User::getIsAdmin() const { return isAdmin; }
+std::vector<std::string> User::getBorrowedBooks() const { return borrowedBooks; }
+int User::getMaxBooksAllowed() const { return maxBooksAllowed; }
+int User::getBorrowedCount() const { return borrowedBooks.size(); }
 
-    do
-    {
-        displayUserMenu();
-        std::cin >> choice;
+void User::setPassword(const std::string& newPassword) { password = newPassword; }
 
-        switch (choice)
-        {
-        case 1:
-            handleSearchBooks();
-            break;
-        case 2:
-            handleViewAvailableBooks();
-            break;
-        case 3:
-            handleBorrowBook();
-            break;
-        case 4:
-            handleReturnBook();
-            break;
-        case 5:
-            handleViewProfile();
-            break;
-        case 0:
-            std::cout << "Logging out..." << std::endl;
-            loginSystem.logout();
-            break;
-        default:
-            std::cout << "Invalid choice. Please try again." << std::endl;
-        }
-    } while (choice != 0 && loginSystem.isLoggedIn() && !loginSystem.isUserAdmin());
+bool User::borrowBook(std::string ISBN) {
+    if (borrowedBooks.size() >= maxBooksAllowed) {
+        std::cout << "Cannot borrow more books. Maximum limit reached." << std::endl;
+        return false;
+    }
+    
+    if (hasBook(ISBN)) {
+        std::cout << "You have already borrowed this book." << std::endl;
+        return false;
+    }
+    
+    borrowedBooks.push_back(ISBN);
+    return true;
 }
 
-void UserMenu::displayUserMenu()
-{
-    std::cout << "\n=== USER PANEL ===" << std::endl;
-    std::cout << "Logged in as: " << loginSystem.getCurrentUser() << std::endl;
+bool User::returnBook(std::string ISBN) {
+    auto it = std::find(borrowedBooks.begin(), borrowedBooks.end(), ISBN);
+    
+    if (it != borrowedBooks.end()) {
+        borrowedBooks.erase(it);
+        return true;
+    }
+    
+    std::cout << "This book was not borrowed by this user." << std::endl;
+    return false;
+}
+
+bool User::hasBook(std::string ISBN) const {
+    return std::find(borrowedBooks.begin(), borrowedBooks.end(), ISBN) != borrowedBooks.end();
+}
+
+void User::displayInfo() const {
     std::cout << "User ID: " << userId << std::endl;
-    std::cout << "1. Search Books" << std::endl;
-    std::cout << "2. View Available Books" << std::endl;
-    std::cout << "3. Borrow Book" << std::endl;
-    std::cout << "4. Return Book" << std::endl;
-    std::cout << "5. My Profile & Borrowed Books" << std::endl;
-    std::cout << "0. Logout" << std::endl;
-    std::cout << "Enter your choice: ";
-}
-
-void UserMenu::handleSearchBooks()
-{
-    std::string keyword;
-    std::cout << "Enter search keyword (title, author, genre, ISBN): ";
-    std::cin.ignore();
-    std::getline(std::cin, keyword);
-
-    std::vector<Book *> results = library.searchBooks(keyword);
-
-    if (results.empty())
-    {
-        std::cout << "No books found matching \"" << keyword << "\"" << std::endl;
-    }
-    else
-    {
-        std::cout << "\n=== Search Results (" << results.size() << " books found) ===" << std::endl;
-        for (Book *book : results)
-        {
-            book->displayInfo();
+    std::cout << "Username: " << username << std::endl;
+    std::cout << "Name: " << name << std::endl;
+    std::cout << "Email: " << email << std::endl;
+    std::cout << "Role: " << (isAdmin ? "Administrator" : "Regular User") << std::endl;
+    std::cout << "Books Borrowed: " << borrowedBooks.size() << "/" << maxBooksAllowed << std::endl;
+    
+    if (!borrowedBooks.empty()) {
+        std::cout << "Borrowed Books ISBNs: ";
+        for (const auto& isbn : borrowedBooks) {
+            std::cout << isbn << " ";
         }
+        std::cout << std::endl;
     }
-}
-
-void UserMenu::handleViewAvailableBooks()
-{
-    std::cout << "\n=== AVAILABLE BOOKS ===" << std::endl;
-
-    std::vector<Book *> allBooks;
-    for (const auto &pair : library.searchBooks(""))
-    { // Empty string returns all books
-        allBooks.push_back(pair);
-    }
-
-    int availableCount = 0;
-    for (Book *book : allBooks)
-    {
-        if (book->getAvailability())
-        {
-            book->displayInfo();
-            availableCount++;
-        }
-    }
-
-    if (availableCount == 0)
-    {
-        std::cout << "No books available at the moment." << std::endl;
-    }
-    else
-    {
-        std::cout << "Total available books: " << availableCount << std::endl;
-    }
-}
-
-void UserMenu::handleBorrowBook()
-{
-    std::string isbn;
-    std::cout << "Enter ISBN of book to borrow: ";
-    std::cin >> isbn;
-
-    if (library.canUserBorrow(userId, isbn))
-    {
-        library.borrowBook(userId, isbn);
-    }
-    else
-    {
-        std::cout << "Cannot borrow this book. It might be unavailable or you've reached your borrowing limit." << std::endl;
-    }
-}
-
-void UserMenu::handleReturnBook()
-{
-    std::string isbn;
-    std::cout << "Enter ISBN of book to return: ";
-    std::cin >> isbn;
-
-    library.returnBook(userId, isbn);
-}
-
-void UserMenu::handleViewProfile()
-{
-    library.displayUserInfo(userId);
+    std::cout << "----------------------------------------" << std::endl;
 }
